@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ImageDiff</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
+</head>
+<body>
+<div class="image-diff">
+    <h2>Comparing with: {{ image_path }}</h2>
+    {% for result in diff_results %}
+        <div class="compare-block">
+            <img class="compare" src="data:image/png;base64,{{ result.src_img_data }}" />
+            <img class="compare" src="data:image/png;base64,{{ result.cmp_img_data }}" />
+            <img class="compare" src="data:image/png;base64,{{ result.diff_img_data }}" />
+        </div>
+    {% endfor %}
+</div>
+</body>
+</html>
