@@ -7,29 +7,23 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
 </head>
 <body>
-<div class="breadcrumbs">
-    {% for crumb in breadcrumbs %}
-        <a href="{{ url_for('index', dir=crumb.path) }}">{{ crumb.name }}</a> /
-    {% endfor %}
-</div>
 <div class="file-browser">
     <table>
         <thead>
-            <tr><th>Name</th><th>Size</th></tr>
+            <tr>
+                <th>Movie</th>
+                {% for version in version_dirs %}
+                    <th><a href="{{ url_for('version_details', version=version) }}">{{ version }}</a></th>
+                {% endfor %}
+            </tr>
         </thead>
         <tbody>
-            {% for file in files %}
+            {% for movie, data in movies.items() %}
                 <tr>
-                    <td>
-                        {% if file.type == 'directory' %}
-                            <a href="{{ url_for('index', dir=file.path) }}">{{ file.name }}</a>
-                        {% elif file.type == 'file' %}
-                            <a href="{{ url_for('display_images', image=file.path) }}">{{ file.name }}</a>
-                        {% else %}
-                            {{ file.name }}
-                        {% endif %}
-                    </td>
-                    <td>{{ file.size }}</td>
+                    <td><a href="{{ url_for('movie_details', movie_name=movie) }}">{{ movie }}</a></td>
+                    {% for version in version_dirs %}
+                        <td style="background-color: {{ data[version]['color'] }}">{{ data[version]['text'] }}</td>
+                    {% endfor %}
                 </tr>
             {% endfor %}
         </tbody>
