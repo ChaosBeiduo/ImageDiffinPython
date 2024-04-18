@@ -4,30 +4,42 @@
     <title>ImageDiff</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}" />
+    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 </head>
 <body>
-<div class="file-browser">
-    <table>
-        <thead>
-            <tr>
-                <th>Movie</th>
-                {% for version in version_dirs %}
-                    <th><a href="{{ url_for('version_details', version=version) }}">{{ version }}</a></th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for movie, data in movies.items() %}
+<div class="container">
+    <h1>Image Version Comparison</h1>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
                 <tr>
-                    <td><a href="{{ url_for('movie_details', movie_name=movie) }}">{{ movie }}</a></td>
-                    {% for version in version_dirs %}
-                        <td style="background-color: {{ data[version]['color'] }}">{{ data[version]['text'] }}</td>
+                    <th>Movie / Version</th>
+                    {% for version in versions %}
+                        <th><a href="{{ url_for('version_detail', version=version) }}">{{ version }}</a></th>
                     {% endfor %}
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for movie, version_info in movies.items() %}
+                    <tr>
+                        <td><a href="{{ url_for('movie_detail', movie=movie) }}">{{ movie }}</a></td>
+                        {% for version in versions %}
+                            {% if version in version_info %}
+                                <td class="diff-present"><a href="{{ url_for('diff_detail', movie=movie, version=version) }}">Diff</a></td>
+                            {% else %}
+                                <td class="no-diff"></td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 </body>
 </html>
