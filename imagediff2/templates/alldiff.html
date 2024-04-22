@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- 根据alldiff()传过来的数据生成表格 -->
+
+<!-- # 显示前20个版本到横轴
+    # 每个movie名称显示在纵轴，只要某个movie的某个版本有变化，就显示红色 -->
+
+    <!-- @app.route('/alldiff')
+    def alldiff():
+        # 读取当前目录下pic文件夹中的所有图片
+        # 文件夹名字是版本号
+        versions = os.listdir('pic')
+        # 文件夹里的名字为<movie>-<num>.png
+        movies = defaultdict(list)
+        for version in versions:
+            for file in os.listdir(f'pic/{version}'):
+                movie = file.split('-')[0]
+                movies[movie].append(file)
+    
+        # 显示前20个版本到横轴
+        # 每个movie名称显示在纵轴，只要某个movie的某个版本有变化，就显示红色
+        # 如果图片在两个版本均存在，就比较两个图片是否有差异
+        # 否则，显示灰色
+        diffs = defaultdict(list)
+        now_path = os.path.dirname(os.path.abspath(__file__))
+        for i, version in enumerate(versions[:25]):
+            for movie, files in movies.items():
+                cnt = 0
+                if i == 0:
+                    diffs[movie].append('gray')
+                    continue
+                for file in files:
+                    current_file_path = f'{now_path}//pic//{version}//{file}'
+                    previous_file_path = f'{now_path}//pic//{versions[i-1]}//{file}'
+                    if file not in os.listdir(f'{now_path}//pic//{versions[i-1]}'):
+                        cnt += 1
+                        continue
+                    if file not in os.listdir(f'{now_path}//pic//{version}'):
+                        cnt += 1
+                        continue
+                    diff_result = image_diff(current_file_path, previous_file_path)
+                    if diff_result:
+                        diffs[movie].append('red')
+                    else:
+                        diffs[movie].append('green')
+                if cnt == len(files):
+                    diffs[movie].append('gray')
+
+        return render_template('alldiff.html', **dict(diffs=diffs, movies=movies, versions=versions)) -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <style>
+        .scrollable-table {
+            overflow-x: auto; /* 横向滚动条 */
+            white-space: nowrap;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: solid 1px #ddd;
+        }
+        th {
+            position: relative; /* 为斜对角线文字做准备 */
+            height: 140px; /* 设置足够的高度以适应斜对角线文字 */
+            white-space: nowrap;
+        }
+        th:before {
+            content: attr(data-diagonal); /* 使用自定义属性来设置文字 */
+            position: absolute;
+            top: 100%;
+            left: 6px;
+            height: 100px;
+            transform-origin: 0 0;
+            transform: rotate(-45deg);
+            white-space: nowrap;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 20px;
+            background-color: #f7f7f7;
+            border: 1px solid #ccc;
+            text-decoration: none;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="scrollable-table">
+        <table>
+            <tr>
+                <th>Versions</th>
+                {% for version in versions %}
+                    <!-- 使用data-diagonal属性来存储要斜放的文本 -->
+                    <th data-diagonal="{{ version }}"></th>
+                {% endfor %}
+            </tr>
+            {% for movie, diff in diffs.items() %}
+                <tr>
+                    <td>{{ movie }}</td>
+                    {% for d in diff %}
+                        <td style="background-color: {{ d }};"></td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <a href="{{ url_for('index') }}" class="button">Return</a>
+</body>
+
+</html>
+
