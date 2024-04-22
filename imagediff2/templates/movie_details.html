@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Movie Details - {{ movie_name }}</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
+</head>
+<body>
+<h1>Details for Movie: {{ movie_name }}</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Frame Number</th>
+            {% for version in version_dirs %}
+                <th>{{ version }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for frame, versions in frames.items() %}
+            <tr>
+                <td>{{ frame }}</td>
+                {% for version in version_dirs %}
+                    <td>
+                        {% if version in versions %}
+                            <a href="{{ url_for('display_images', image=os.path.join('.', version, movie_name + '-' + frame + '.png')) }}">View Diff</a>
+                        {% else %}
+                            No Image
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</body>
+</html>

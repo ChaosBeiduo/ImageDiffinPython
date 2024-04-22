@@ -34,11 +34,13 @@ def dynamic_image():
 def alldiff():
     # 读取当前目录下pic文件夹中的所有图片
     # 文件夹名字是版本号
-    versions = os.listdir('pic')
+    path = os.path.dirname(os.path.abspath(__file__))
+    print(path)
+    versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
     # 文件夹里的名字为<movie>-<num>.png
     movies = defaultdict(list)
     for version in versions:
-        for file in os.listdir(f'pic/{version}'):
+        for file in os.listdir(f'{path}/pic/{version}'):
             movie = file.split('-')[0]
             movies[movie].append(file)
 
@@ -78,6 +80,17 @@ def alldiff():
 
     return render_template('alldiff.html', **dict(diffs=diffs, movies=movies, versions=versions))
 
+# 点进纵坐标的movie，显示该movie的所有版本
+@app.route('/movie/<movie>')
+def movie(movie):
+    path = os.path.dirname(os.path.abspath(__file__))
+    versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
+    movies = defaultdict(list)
+    for version in versions:
+        for file in os.listdir(f'{path}/pic/{version}'):
+            if file.startswith(movie):
+                movies[version].append(file)
+    return render_template('movie.html', **dict(movies=movies, movie=movie))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)

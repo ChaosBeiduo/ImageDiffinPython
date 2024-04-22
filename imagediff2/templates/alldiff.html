@@ -105,12 +105,12 @@
                 {% endfor %}
             </tr>
             {% for movie, diff in diffs.items() %}
+                <!-- 链接到对应的movie的所有版本的页面 -->
                 <tr>
-                    <td>{{ movie }}</td>
+                    <td><a href="{{ url_for('movie', movie=movie) }}">{{ movie }}</a></td>
                     {% for d in diff %}
-                        <td style="background-color: {{ d }};"></td>
+                        <td style="background-color: {{ d }}"></td>
                     {% endfor %}
-                </tr>
             {% endfor %}
         </table>
     </div>
