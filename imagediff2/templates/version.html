@@ -1,0 +1,55 @@
+<!-- @app.route('/version/<version>')
+    def version(version):
+        path = os.path.dirname(os.path.abspath(__file__))
+        
+        versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
+        versions.sort()
+        previous_version = versions[versions.index(version) - 1] if version != versions[0] else None
+        movies = set()
+        for it in versions:
+            for file in os.listdir(f'{path}/pic/{it}'):
+                movies.add(file.split('-')[0])
+        diffs = defaultdict(bool)
+        for movie in movies:
+            if previous_version:
+                res = image_diff(f'{path}/{version}/{movie}', f'{path}/{previous_version}/{movie}')
+                diffs[movie] = res
+            else:
+                diffs[movie] = False
+                
+        return render_template('version.html', **dict(version=version, diffs=diffs, movies=movies, previous_version=previous_version)) -->
+
+<head>
+    <!-- 显示两列，一列为movie-名称，一列为是否有变化 -->
+    <title>Version Details - {{ version }}</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
+</head>
+
+<!-- 若有变化则显示DIFF并超链接到比较页面，否则显示No Diff并超链接到比较页面 -->
+<body>
+    <h1>Version Details - {{ version }}</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Movie</th>
+                <th>Diff</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for movie in movies %}
+                <tr>
+                    <td>{{ movie }}</td>
+                    <td>
+                        {% if diffs[movie] %}
+                            <a href="{{ url_for('diff', version1=previous_version, version2=version, movie=movie.split('-')[0], frame=movie.split('-')[1].split('.')[0]) }}">View Diff</a>
+                        {% else %}
+                            <a href="{{ url_for('diff', version1=previous_version, version2=version, movie=movie.split('-')[0], frame=movie.split('-')[1].split('.')[0]) }}">No Diff</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>

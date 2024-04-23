@@ -1,0 +1,25 @@
+<!-- app.route('/diff/<version1>/<version2>/<movie>/<frame>')
+    def diff(version1, version2, movie, frame):
+        path = os.path.dirname(os.path.abspath(__file__))
+        file1 = f'{path}/pic/{version1}/{movie}-{frame}.png'
+        file2 = f'{path}/pic/{version2}/{movie}-{frame}.png'
+        diff_result = image_diff(file1, file2)
+        return render_template('diff.html', **dict(diff_result=diff_result, version1=version1, version2=version2, movie=movie, frame=frame)) -->
+
+<head>
+    <title>ImageDiff</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
+</head>
+
+<body>
+    <div class="image-diff">
+        <h2>Comparing {{ movie }} - Frame {{ frame }} between {{ version1 }} and {{ version2 }}</h2>
+        <div class="compare-block">
+            <img class="compare" src="data:image/png;base64,{{ diff_result.src_img_data }}" />
+            <img class="compare" src="data:image/png;base64,{{ diff_result.cmp_img_data }}" />
+            <img class="compare" src="data:image/png;base64,{{ diff_result.diff_img_data }}" />
+        </div>
+    </div>
+</body>

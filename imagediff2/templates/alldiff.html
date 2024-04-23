@@ -101,7 +101,9 @@
                 <th>Versions</th>
                 {% for version in versions %}
                     <!-- 使用data-diagonal属性来存储要斜放的文本 -->
-                    <th data-diagonal="{{ version }}"></th>
+                    <!-- 并连接到对应版本的页面 -->
+                    <th data-diagonal="{{ version }}"><a href="{{ url_for('version', version=version) }}">{{ version }}</a></th>
+                    
                 {% endfor %}
             </tr>
             {% for movie, diff in diffs.items() %}

@@ -37,6 +37,7 @@ def alldiff():
     path = os.path.dirname(os.path.abspath(__file__))
     print(path)
     versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
+    versions.sort()
     # 文件夹里的名字为<movie>-<num>.png
     movies = defaultdict(list)
     for version in versions:
@@ -85,12 +86,51 @@ def alldiff():
 def movie(movie):
     path = os.path.dirname(os.path.abspath(__file__))
     versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
+    versions.sort()
     movies = defaultdict(list)
     for version in versions:
         for file in os.listdir(f'{path}/pic/{version}'):
             if file.startswith(movie):
                 movies[version].append(file)
-    return render_template('movie.html', **dict(movies=movies, movie=movie))
+    frames = defaultdict(list)
+    for version, files in movies.items():
+        for file in files:
+            frame = file.split('-')[1].split('.')[0]
+            frames[frame].append(version)
+    return render_template('movie.html', **dict(movies=movies, movie=movie, frames=frames, movie_name=movie, versions=versions))
+
+@app.route('/version/<version>')
+def version(version):
+    path = os.path.dirname(os.path.abspath(__file__))
+    
+    versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
+    versions.sort()
+    previous_version = versions[versions.index(version) - 1] if version != versions[0] else None
+    movies = set()
+    for it in versions:
+        for file in os.listdir(f'{path}/pic/{it}'):
+            movies.add(file.split('.')[0])
+    diffs = defaultdict(bool)
+    movies = sorted(list(movies))
+    for movie in movies:
+        if previous_version:
+            res = image_diff(f'{path}/{version}/{movie}', f'{path}/{previous_version}/{movie}')
+            if res != {}:
+                diffs[movie] = True
+        else:
+            diffs[movie] = False
+            
+    return render_template('version.html', **dict(version=version, diffs=diffs, movies=movies, previous_version=previous_version))
+
+
+@app.route('/diff/<version1>/<version2>/<movie>/<frame>')
+def diff(version1, version2, movie, frame):
+    path = os.path.dirname(os.path.abspath(__file__))
+    file1 = f'{path}/pic/{version1}/{movie}-{frame}.png'
+    file2 = f'{path}/pic/{version2}/{movie}-{frame}.png'
+    diff_result = image_diff(file1, file2)
+    return render_template('diff.html', **dict(diff_result=diff_result, version1=version1, version2=version2, movie=movie, frame=frame))
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

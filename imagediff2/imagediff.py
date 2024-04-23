@@ -17,7 +17,8 @@ def image_diff(src_img_path, cmp_img_path):
         src_img = Image.open(src_img_path)
         cmp_img = Image.open(cmp_img_path)
         diff_img = ImageChops.difference(src_img, cmp_img).convert('RGB')
-
+        if diff_img.getbbox() is None:
+            return {}
         return {
             'src_img_data': encode_image(src_img),
             'cmp_img_data': encode_image(cmp_img),
