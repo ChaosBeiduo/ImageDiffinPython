@@ -5,14 +5,50 @@ import io, os
 from collections import defaultdict
 from imagediff import has_image_difference, image_diff
 from pathlib import Path
+from config import SCREENSHOTS_DIR
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template('index.html',**dict(buttons=[
-        dict(top='100', left='100', width='200', height='200',url='asd'),
-    ]))
+    targets_info = {}
+
+    for target in [d for d in os.listdir(SCREENSHOTS_DIR)
+                   if os.path.isdir(os.path.join(SCREENSHOTS_DIR, d))]:
+
+        target_path = os.path.join(SCREENSHOTS_DIR, target)
+        builds = [b for b in os.listdir(target_path)
+                  if os.path.isdir(os.path.join(target_path, b))]
+
+        # Get all movie names across all builds
+        all_movies = set()
+        build_movies = {}
+
+        for build in builds:
+            build_path = os.path.join(target_path, build)
+            movie_files = [f for f in os.listdir(build_path)
+                           if os.path.isfile(os.path.join(build_path, f))]
+
+            movie_names = set()
+            for file in movie_files:
+                # Split by hyphen and take the first part as the movie name
+                if "-" in file:
+                    movie_name = file.split("-")[0]
+                    movie_names.add(movie_name)
+
+            build_movies[build] = movie_names
+            all_movies.update(movie_names)
+
+        # Convert set to sorted list for consistent display
+        all_movies = sorted(list(all_movies))
+
+        targets_info[target] = {
+            "builds": builds,
+            "movies": all_movies,
+            "build_movies": build_movies
+        }
+
+    return render_template('index.html', targets_info=targets_info)
 
 @app.route('/image')
 def dynamic_image():
