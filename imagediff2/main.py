@@ -17,8 +17,9 @@ def index():
                    if os.path.isdir(os.path.join(SCREENSHOTS_DIR, d))]:
 
         target_path = os.path.join(SCREENSHOTS_DIR, target)
-        builds = [b for b in os.listdir(target_path)
-                  if os.path.isdir(os.path.join(target_path, b))]
+        builds = sorted([b for b in os.listdir(target_path)
+                         if os.path.isdir(os.path.join(target_path, b))],
+                        reverse=True)
 
         # Get all movie names across all builds
         all_movies = set()
