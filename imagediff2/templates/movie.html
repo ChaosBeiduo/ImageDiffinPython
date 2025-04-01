@@ -1,66 +1,98 @@
-
-
+<!DOCTYPE html>
+<html>
 <head>
-    <title>Movie Details - {{ movie_name }}</title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
+    <title>Movie: {{ movie }}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" />
     <style>
-        .scrollable-table {
-            overflow-x: auto; 
-            white-space: nowrap;
+        .target-name {
+            color: #0066cc;
         }
-        table {
-            border-collapse: collapse;
-            width: 100%;
+        .build-cell {
+            background-color: #e6ffe6;
         }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
+
+        .result-table{
+            padding-bottom: 24px;
+
             text-align: center;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .diff-present {
-            background-color: red;
-        }
-        .no-diff {
-            background-color: gray;
+
+            thead>tr{
+                height: 50px;
+            }
+
+            tbody>tr>th a{
+                margin-right: 12px;
+            }
+
+            .result-table-build{
+                width: 30px;
+                transform: translate(-12px, 10px) rotate(315deg);
+                a{
+                    border-bottom: 1px solid #ccc;
+                }
+            }
         }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <h1>Movie Details - {{ movie_name }}</h1>
-        <div class="scrollable-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Frame</th>
-                        {% for version in versions %}
-                            <th>{{ version }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for frame, version_info in frames.items() %}
-                        <tr>
-                            <td>{{ frame }}</td>
-                            {% for version in versions %}
-                                {% if version in version_info %}
-                                    <td class="diff-present"><a href="{{ url_for('diff', version1=versions[versions.index(version) - 1], version2=version, movie=movie_name, frame=frame) }}">Diff</a></td>
-                                {% else %}
-                                    <td class="no-diff"></td>
-                                {% endif %}
-                            {% endfor %}
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
+<header>
+    <h1><a href="{{ url_for('index') }}">ImageDiff</a></h1>
+</header>
+<h1>{{ movie }}</h1>
 
+<h2>Description</h2>
+
+{% if target_builds %}
+<table>
+    <thead>
+    <tr>
+        <th>Target</th>
+        <th>Builds</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for target, builds in target_builds.items() %}
+    <tr>
+        <td class="target-name">
+            <a href="#{{ target }}">{{ target }}</a>
+        </td>
+        <td>
+            {{ builds|length }} builds
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<h2>Recent results</h2>
+{% for target, builds in target_builds.items() %}
+<div class="quote">
+    <table class="result-table">
+        <thead>
+        <tr>
+            <th> </th>
+            {% for build in builds %}
+            <th class="result-table-build">
+                <a href="{{ url_for('build', build=build) }}">{{ build }}</a>
+            </th>
+            {% endfor %}
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <th><a href="{{ url_for('index')}}">{{ target }}</a></th>
+            {% for build in builds %}
+            <td class="build-cell">
+                <a href="#">View</a>
+            </td>
+            {% endfor %}
+        </tr>
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% else %}
+<p>No targets or builds found containing the movie "{{ movie }}".</p>
+{% endif %}
+</body>
 </html>

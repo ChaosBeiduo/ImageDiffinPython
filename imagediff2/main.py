@@ -51,22 +51,6 @@ def index():
 
     return render_template('index.html', targets_info=targets_info)
 
-@app.route('/image')
-def dynamic_image():
-
-    img = Image.new('RGB', (700, 400), color = (73, 109, 137))
-
-    #draw rectangle
-    draw = ImageDraw.Draw(img)
-    draw.rectangle([100, 100, 300, 300], fill=(255, 255, 255), outline=(0, 0, 0))
-   
-    img_io = io.BytesIO()
-    img.save(img_io, 'JPEG', quality=70)
-    img_io.seek(0)  
-    
-   
-    return send_file(img_io, mimetype='image/jpeg')
-
 @app.route('/alldiff')
 def alldiff():
    
@@ -116,20 +100,36 @@ def alldiff():
 
 @app.route('/movie/<movie>')
 def movie(movie):
-    path = os.path.dirname(os.path.abspath(__file__))
-    versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
-    versions.sort()
-    movies = defaultdict(list)
-    for version in versions:
-        for file in os.listdir(f'{path}/pic/{version}'):
-            if file.startswith(movie):
-                movies[version].append(file)
-    frames = defaultdict(list)
-    for version, files in movies.items():
-        for file in files:
-            frame = file.split('-')[1].split('.')[0]
-            frames[frame].append(version)
-    return render_template('movie.html', **dict(movies=movies, movie=movie, frames=frames, movie_name=movie, versions=versions))
+    target_builds = {}
+
+    # Scan through all targets
+    for target in os.listdir (SCREENSHOTS_DIR):
+        target_path = os.path.join (SCREENSHOTS_DIR, target)
+        if os.path.isdir (target_path):
+            # Scan through all builds in this target
+            builds_with_movie = []
+
+            builds = sorted ([b for b in os.listdir (target_path)
+                              if os.path.isdir (os.path.join (target_path, b))],
+                             reverse=True)
+
+            for build in builds:
+                build_path = os.path.join (target_path, build)
+                # Check if this build contains the movie
+                movie_files = [f for f in os.listdir (build_path)
+                               if os.path.isfile (os.path.join (build_path, f))]
+
+                # Check if any files start with the movie name
+                has_movie = any (f.startswith (f"{movie}-") for f in movie_files)
+
+                if has_movie:
+                    builds_with_movie.append (build)
+
+            # Only add this target if it has at least one build with the movie
+            if builds_with_movie:
+                target_builds[target] = builds_with_movie
+
+    return render_template ('movie.html', movie=movie, target_builds=target_builds)
 
 @app.route('/version/<version>')
 def version(version):
