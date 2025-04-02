@@ -3,7 +3,7 @@ from PIL import Image
 from PIL import ImageDraw
 import io, os
 from collections import defaultdict
-from imagediff import has_image_difference, image_diff
+from imagediff import image_diff, encode_image, movie_diff
 from pathlib import Path
 from config import SCREENSHOTS_DIR
 
@@ -102,6 +102,7 @@ def alldiff():
 def movie(movie):
     target_builds = {}
     all_builds = set()
+    diff_matrix = {}
 
     # Scan through all targets
     for target in os.listdir(SCREENSHOTS_DIR):
@@ -125,16 +126,30 @@ def movie(movie):
 
                 if has_movie:
                     builds_with_movie.append(build)
-                    all_builds.add(build)  # Add to the set of all builds
+                    all_builds.add(build)
 
-            # Only add this target if it has at least one build with the movie
+            for i in range(len(builds_with_movie) - 1):
+                current_build = builds_with_movie[i]
+                prev_build = builds_with_movie[i + 1]
+
+                has_diff = movie_diff(current_build, prev_build, target, movie)
+
+                if target not in diff_matrix:
+                    diff_matrix[target] = {}
+
+                diff_matrix[target][(current_build, prev_build)] = has_diff
+
             if builds_with_movie:
                 target_builds[target] = builds_with_movie
 
-    # Convert set to sorted list
     all_builds = sorted(list(all_builds), reverse=True)
 
-    return render_template('movie.html', movie=movie, target_builds=target_builds, all_builds=all_builds)
+    return render_template('movie.html',
+                           movie=movie,
+                           target_builds=target_builds,
+                           all_builds=all_builds,
+                           diff_matrix=diff_matrix)
+
 
 @app.route('/build/<build>')
 def build(build):
@@ -263,15 +278,39 @@ def compare(build1, build2, target, movie):
             img2_path = os.path.join(build2_path, build2_frame)
 
             try:
-                # Use your image_diff function
                 diff_result = image_diff(img1_path, img2_path)
-                comparison['has_diff'] = bool(diff_result)  # True if non-empty
+                comparison['has_diff'] = diff_result.get('has_diff', False)
                 comparison['diff_data'] = diff_result
             except Exception as e:
                 print(f"Error comparing images: {e}")
         else:
             # If one frame is missing in either build, mark as different
             comparison['has_diff'] = True
+            # Handle case when only build1 has the frame
+            if build1_frame and not build2_frame:
+                try:
+                    img1_path = os.path.join(build1_path, build1_frame)
+                    src_img = Image.open(img1_path)
+                    comparison['diff_data'] = {
+                        'src_img_data': encode_image(src_img),
+                        'cmp_img_data': None,
+                        'diff_img_data': None  # No diff image needed here
+                    }
+                except Exception as e:
+                    print(f"Error encoding image from build1: {e}")
+
+            # Handle case when only build2 has the frame
+            elif not build1_frame and build2_frame:
+                try:
+                    img2_path = os.path.join(build2_path, build2_frame)
+                    cmp_img = Image.open(img2_path)
+                    comparison['diff_data'] = {
+                        'src_img_data': None,
+                        'cmp_img_data': encode_image(cmp_img),
+                        'diff_img_data': None  # No diff image needed here
+                    }
+                except Exception as e:
+                    print(f"Error encoding image from build2: {e}")
 
         frame_comparisons.append(comparison)
 
