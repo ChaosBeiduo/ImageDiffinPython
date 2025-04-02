@@ -38,6 +38,7 @@
 <header>
     <h1><a href="{{ url_for('index') }}">ImageDiff</a></h1>
 </header>
+
 <h1>{{ movie }}</h1>
 
 <h2>Description</h2>
@@ -65,13 +66,12 @@
 </table>
 
 <h2>Recent results</h2>
-{% for target, builds in target_builds.items() %}
 <div class="quote">
     <table class="result-table">
         <thead>
         <tr>
             <th> </th>
-            {% for build in builds %}
+            {% for build in all_builds %}
             <th class="result-table-build">
                 <a href="{{ url_for('build', build=build) }}">{{ build }}</a>
             </th>
@@ -79,18 +79,30 @@
         </tr>
         </thead>
         <tbody>
+        {% for target, builds in target_builds.items() %}
         <tr>
-            <th><a href="{{ url_for('index')}}">{{ target }}</a></th>
-            {% for build in builds %}
+            <th><a href="{{ url_for('index') }}#{{ target }}">{{ target }}</a></th>
+            {% for build in all_builds %}
             <td class="build-cell">
-                <a href="#">View</a>
+                {% if build in builds %}
+                {% set build_index = builds.index(build) %}
+                {% if build_index < (builds|length - 1) %}
+                {% set next_build = builds[build_index + 1] %}
+                <a href="{{ url_for('compare', build1=build, build2=next_build, target=target, movie=movie) }}">View</a>
+                {% else %}
+                <a href="/target/{{ target }}/build/{{ build }}/movie/{{ movie }}">View</a>
+                <span>(First build)</span>
+                {% endif %}
+                {% else %}
+                —
+                {% endif %}
             </td>
             {% endfor %}
         </tr>
+        {% endfor %}
         </tbody>
     </table>
 </div>
-{% endfor %}
 {% else %}
 <p>No targets or builds found containing the movie "{{ movie }}".</p>
 {% endif %}

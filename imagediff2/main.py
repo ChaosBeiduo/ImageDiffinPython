@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_file
+from flask import Flask, render_template, send_file, send_from_directory
 from PIL import Image
 from PIL import ImageDraw
 import io, os
@@ -101,68 +101,190 @@ def alldiff():
 @app.route('/movie/<movie>')
 def movie(movie):
     target_builds = {}
+    all_builds = set()
 
     # Scan through all targets
-    for target in os.listdir (SCREENSHOTS_DIR):
-        target_path = os.path.join (SCREENSHOTS_DIR, target)
-        if os.path.isdir (target_path):
+    for target in os.listdir(SCREENSHOTS_DIR):
+        target_path = os.path.join(SCREENSHOTS_DIR, target)
+        if os.path.isdir(target_path):
             # Scan through all builds in this target
             builds_with_movie = []
 
-            builds = sorted ([b for b in os.listdir (target_path)
-                              if os.path.isdir (os.path.join (target_path, b))],
-                             reverse=True)
+            builds = sorted([b for b in os.listdir(target_path)
+                             if os.path.isdir(os.path.join(target_path, b))],
+                            reverse=True)  # Sort in descending order
 
             for build in builds:
-                build_path = os.path.join (target_path, build)
+                build_path = os.path.join(target_path, build)
                 # Check if this build contains the movie
-                movie_files = [f for f in os.listdir (build_path)
-                               if os.path.isfile (os.path.join (build_path, f))]
+                movie_files = [f for f in os.listdir(build_path)
+                               if os.path.isfile(os.path.join(build_path, f))]
 
                 # Check if any files start with the movie name
-                has_movie = any (f.startswith (f"{movie}-") for f in movie_files)
+                has_movie = any(f.startswith(f"{movie}-") for f in movie_files)
 
                 if has_movie:
-                    builds_with_movie.append (build)
+                    builds_with_movie.append(build)
+                    all_builds.add(build)  # Add to the set of all builds
 
             # Only add this target if it has at least one build with the movie
             if builds_with_movie:
                 target_builds[target] = builds_with_movie
 
-    return render_template ('movie.html', movie=movie, target_builds=target_builds)
+    # Convert set to sorted list
+    all_builds = sorted(list(all_builds), reverse=True)
 
-@app.route('/version/<version>')
-def version(version):
+    return render_template('movie.html', movie=movie, target_builds=target_builds, all_builds=all_builds)
+
+@app.route('/build/<build>')
+def build(build):
     path = os.path.dirname(os.path.abspath(__file__))
-    
-    versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
-    versions.sort()
-    previous_version = versions[versions.index(version) - 1] if version != versions[0] else None
-    movies = set()
-    for it in versions:
-        for file in os.listdir(f'{path}/pic/{it}'):
-            movies.add(file.split('.')[0])
-    diffs = defaultdict(bool)
-    movies = sorted(list(movies))
-    for movie in movies:
-        if previous_version:
-            res = image_diff(f'{path}/{version}/{movie}', f'{path}/{previous_version}/{movie}')
-            if res != {}:
-                diffs[movie] = True
+    screenshots_dir = f'{path}/screenshots'
+
+    # Find all targets that contain this build
+    targets_with_build = []
+    for target in os.listdir(screenshots_dir):
+        target_path = os.path.join(screenshots_dir, target)
+        if os.path.isdir(target_path):
+            builds_in_target = [d for d in os.listdir(target_path)
+                                if os.path.isdir(os.path.join(target_path, d))]
+            if build in builds_in_target:
+                targets_with_build.append(target)
+
+    # For each target, find the previous build
+    target_details = {}
+    for target in targets_with_build:
+        target_path = os.path.join(screenshots_dir, target)
+        builds_in_target = sorted([d for d in os.listdir(target_path)
+                                   if os.path.isdir(os.path.join(target_path, d))])
+
+        # Get previous build for this target
+        build_index = builds_in_target.index(build)
+        prev_build = builds_in_target[build_index - 1] if build_index > 0 else None
+
+        # Find all movies in this build for this target
+        build_path = os.path.join(target_path, build)
+        movie_files = [f for f in os.listdir(build_path)
+                       if os.path.isfile(os.path.join(build_path, f))]
+
+        # Extract movie names
+        movies = set()
+        for file in movie_files:
+            if "-" in file:
+                movie_name = file.split("-")[0]
+                movies.add(movie_name)
+
+        # Check for differences with previous build
+        diffs = {}
+        if prev_build:
+            prev_build_path = os.path.join(target_path, prev_build)
+            for movie in movies:
+                # Check if the movie exists in both builds
+                current_frames = [f for f in movie_files if f.startswith(movie + "-")]
+                if os.path.exists(prev_build_path):
+                    prev_movie_files = [f for f in os.listdir(prev_build_path)
+                                        if os.path.isfile(os.path.join(prev_build_path, f))]
+                    prev_frames = [f for f in prev_movie_files if f.startswith(movie + "-")]
+
+                    # If you have an image_diff function, use it here
+                    try:
+                        has_diff = len(current_frames) != len(prev_frames)  # Simple difference check
+                        # For a more detailed check, you'd use your image_diff function:
+                        # has_diff = image_diff(f'{build_path}/{movie}', f'{prev_build_path}/{movie}') != {}
+                        diffs[movie] = has_diff
+                    except Exception as e:
+                        # Handle any errors in difference checking
+                        diffs[movie] = False
+                        print(f"Error comparing {movie}: {e}")
+                else:
+                    diffs[movie] = True  # If previous build doesn't exist, mark as different
+
+        target_details[target] = {
+            'prev_build': prev_build,
+            'movies': sorted(list(movies)),
+            'diffs': diffs
+        }
+
+    return render_template('build.html',
+                           build=build,
+                           targets=targets_with_build,
+                           target_details=target_details)
+
+@app.route('/compare/<build1>/<build2>/<target>/<movie>')
+def compare(build1, build2, target, movie):
+    build1_path = os.path.join(SCREENSHOTS_DIR, target, build1)
+    build2_path = os.path.join(SCREENSHOTS_DIR, target, build2)
+
+    # Get all frames for this movie in both builds
+    build1_frames = sorted([f for f in os.listdir(build1_path)
+                            if os.path.isfile(os.path.join(build1_path, f)) and f.startswith(f"{movie}-")])
+
+    build2_frames = sorted([f for f in os.listdir(build2_path)
+                            if os.path.isfile(os.path.join(build2_path, f)) and f.startswith(f"{movie}-")])
+
+    # Helper function to extract frame number from filename
+    def get_frame_number(filename):
+        parts = filename.split('-')
+        if len(parts) > 1:
+            try:
+                return int(parts[1].split('.')[0])
+            except ValueError:
+                return 0
+        return 0
+
+    # Sort frames by number
+    build1_frames.sort(key=get_frame_number)
+    build2_frames.sort(key=get_frame_number)
+
+    # Map frame numbers to filenames for easy lookup
+    build1_frame_map = {get_frame_number(f): f for f in build1_frames}
+    build2_frame_map = {get_frame_number(f): f for f in build2_frames}
+
+    # Get all frame numbers from both builds
+    all_frame_numbers = sorted(set(list(build1_frame_map.keys()) + list(build2_frame_map.keys())))
+
+    # For each frame number, create a comparison entry
+    frame_comparisons = []
+    for frame_num in all_frame_numbers:
+        build1_frame = build1_frame_map.get(frame_num)
+        build2_frame = build2_frame_map.get(frame_num)
+
+        comparison = {
+            'frame_number': frame_num,
+            'build1_frame': build1_frame,
+            'build2_frame': build2_frame,
+            'has_diff': False,
+            'diff_data': None
+        }
+
+        # Calculate diff if both frames exist
+        if build1_frame and build2_frame:
+            img1_path = os.path.join(build1_path, build1_frame)
+            img2_path = os.path.join(build2_path, build2_frame)
+
+            try:
+                # Use your image_diff function
+                diff_result = image_diff(img1_path, img2_path)
+                comparison['has_diff'] = bool(diff_result)  # True if non-empty
+                comparison['diff_data'] = diff_result
+            except Exception as e:
+                print(f"Error comparing images: {e}")
         else:
-            diffs[movie] = False
-            
-    return render_template('version.html', **dict(version=version, diffs=diffs, movies=movies, previous_version=previous_version))
+            # If one frame is missing in either build, mark as different
+            comparison['has_diff'] = True
 
+        frame_comparisons.append(comparison)
 
-@app.route('/diff/<version1>/<version2>/<movie>/<frame>')
-def diff(version1, version2, movie, frame):
-    path = os.path.dirname(os.path.abspath(__file__))
-    file1 = f'{path}/pic/{version1}/{movie}-{frame}.png'
-    file2 = f'{path}/pic/{version2}/{movie}-{frame}.png'
-    diff_result = image_diff(file1, file2)
-    return render_template('diff.html', **dict(diff_result=diff_result, version1=version1, version2=version2, movie=movie, frame=frame))
+    return render_template('compare.html',
+                           build1=build1,
+                           build2=build2,
+                           target=target,
+                           movie=movie,
+                           comparisons=frame_comparisons)
 
+@app.route('/screenshots/<path:filename>')
+def screenshots(filename):
+    return send_from_directory(SCREENSHOTS_DIR, filename)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
