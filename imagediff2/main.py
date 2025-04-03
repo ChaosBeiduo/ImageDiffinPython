@@ -161,77 +161,54 @@ def movie(movie):
 
 @app.route('/build/<build>')
 def build(build):
-    path = os.path.dirname(os.path.abspath(__file__))
-    screenshots_dir = f'{path}/screenshots'
+    target_info = {}
 
-    # Find all targets that contain this build
-    targets_with_build = []
-    for target in os.listdir(screenshots_dir):
-        target_path = os.path.join(screenshots_dir, target)
-        if os.path.isdir(target_path):
-            builds_in_target = [d for d in os.listdir(target_path)
-                                if os.path.isdir(os.path.join(target_path, d))]
-            if build in builds_in_target:
-                targets_with_build.append(target)
+    for target in os.listdir(SCREENSHOTS_DIR):
+        target_path = os.path.join(SCREENSHOTS_DIR, target)
+        if not os.path.isdir(target_path):
+            continue
 
-    # For each target, find the previous build
-    target_details = {}
-    for target in targets_with_build:
-        target_path = os.path.join(screenshots_dir, target)
-        builds_in_target = sorted([d for d in os.listdir(target_path)
-                                   if os.path.isdir(os.path.join(target_path, d))])
+        builds = sorted([b for b in os.listdir(target_path)
+                         if os.path.isdir(os.path.join(target_path, b))],
+                        reverse=True)
 
-        # Get previous build for this target
-        build_index = builds_in_target.index(build)
-        prev_build = builds_in_target[build_index - 1] if build_index > 0 else None
+        # Check if current build exists in this target
+        if build not in builds:
+            continue
 
-        # Find all movies in this build for this target
+        # Find the previous build
+        build_index = builds.index(build)
+        prev_build = builds[build_index + 1] if build_index < len(builds) - 1 else None
+
+        # Find all movies in this build
         build_path = os.path.join(target_path, build)
         movie_files = [f for f in os.listdir(build_path)
                        if os.path.isfile(os.path.join(build_path, f))]
 
-        # Extract movie names
+        # Extract unique movie names
         movies = set()
         for file in movie_files:
             if "-" in file:
                 movie_name = file.split("-")[0]
                 movies.add(movie_name)
 
-        # Check for differences with previous build
-        diffs = {}
+        # Calculate differences for each movie
+        movie_diffs = {}
         if prev_build:
-            prev_build_path = os.path.join(target_path, prev_build)
             for movie in movies:
-                # Check if the movie exists in both builds
-                current_frames = [f for f in movie_files if f.startswith(movie + "-")]
-                if os.path.exists(prev_build_path):
-                    prev_movie_files = [f for f in os.listdir(prev_build_path)
-                                        if os.path.isfile(os.path.join(prev_build_path, f))]
-                    prev_frames = [f for f in prev_movie_files if f.startswith(movie + "-")]
+                has_diff = movie_diff(build, prev_build, target, movie)
+                movie_diffs[movie] = has_diff
 
-                    # If you have an image_diff function, use it here
-                    try:
-                        has_diff = len(current_frames) != len(prev_frames)  # Simple difference check
-                        # For a more detailed check, you'd use your image_diff function:
-                        # has_diff = image_diff(f'{build_path}/{movie}', f'{prev_build_path}/{movie}') != {}
-                        diffs[movie] = has_diff
-                    except Exception as e:
-                        # Handle any errors in difference checking
-                        diffs[movie] = False
-                        print(f"Error comparing {movie}: {e}")
-                else:
-                    diffs[movie] = True  # If previous build doesn't exist, mark as different
-
-        target_details[target] = {
+        # Store target information
+        target_info[target] = {
             'prev_build': prev_build,
             'movies': sorted(list(movies)),
-            'diffs': diffs
+            'movie_diffs': movie_diffs
         }
 
     return render_template('build.html',
                            build=build,
-                           targets=targets_with_build,
-                           target_details=target_details)
+                           target_info=target_info)
 
 @app.route('/compare/<build1>/<build2>/<target>/<movie>')
 def compare(build1, build2, target, movie):
