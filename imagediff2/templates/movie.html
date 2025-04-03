@@ -3,18 +3,6 @@
 <head>
     <title>Movie: {{ movie }}</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" />
-    <style>
-        a {
-            text-decoration: none;
-            color: #0066cc;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        h1 a {
-            color: #333;
-        }
-    </style>
 </head>
 <body>
 <header>
@@ -54,48 +42,48 @@
 <section>
     <h2>Recent results</h2>
     <div class="quote">
-        <table class="result-table">
+        <table class="result-table horizontal">
             <thead>
-                <tr>
-                    <th> </th>
-                    {% for build in all_builds %}
-                    <th class="result-table-build">
-                        <a href="{{ url_for('build', build=build) }}">{{ build }}</a>
-                    </th>
-                    {% endfor %}
-                </tr>
+            <tr>
+                <th> </th>
+                {% for build in all_builds %}
+                <th class="result-table-build">
+                    <a href="{{ url_for('build', build=build) }}">{{ build }}</a>
+                </th>
+                {% endfor %}
+            </tr>
             </thead>
             <tbody>
-                {% for target, builds in target_builds.items() %}
-                <tr>
-                    <th><a href="{{ url_for('index') }}#{{ target }}">{{ target }}</a></th>
-                    {% for build in all_builds %}
-                        {% if build in builds %}
-                            {% set build_index = builds.index(build) %}
-                            {% if build_index < (builds|length - 1) %}
-                                {% set next_build = builds[build_index + 1] %}
-                                {% if diff_matrix.get(target, {}).get((build, next_build), False) %}
-                                    <td class="success has-diff">
-                                        <a href="{{ url_for('compare', build1=build, build2=next_build, target=target, movie=movie) }}">🔍</a>
-                                    </td>
-                                {% else %}
-                                    <td class="success no-diff">
-                                        <!-- 没有差异，空白绿色单元格 -->
-                                    </td>
-                                {% endif %}
-                            {% else %}
-                                <td class="success first-build">
-                                    <a href="{{ url_for('compare', build1=build, build2=next_build, target=target, movie=movie) }}">🔍</a>
-                                </td>
-                            {% endif %}
-                        {% else %}
-                            <td class="no-data">
-                                <!-- 没有数据，红色单元格 -->
-                            </td>
-                        {% endif %}
-                    {% endfor %}
-                </tr>
+            {% for target, builds in target_builds.items() %}
+            <tr>
+                <th><a href="{{ url_for('index') }}#{{ target }}">{{ target }}</a></th>
+                {% for build in all_builds %}
+                {% if build in builds %}
+                {% set build_index = builds.index(build) %}
+                {% if build_index < (builds|length - 1) %}
+                {% set next_build = builds[build_index + 1] %}
+                {% if diff_matrix.get(target, {}).get((build, next_build), False) %}
+                <td class="success has-diff">
+                    <a href="{{ url_for('compare', build1=build, build2=next_build, target=target, movie=movie) }}">🔍</a>
+                </td>
+                {% else %}
+                <td class="success no-diff">
+                    <!-- 没有差异，空白绿色单元格 -->
+                </td>
+                {% endif %}
+                {% else %}
+                <td class="success first-build">
+                    <a href="{{ url_for('view_single_build', build=build, target=target, movie=movie) }}">🔍</a>
+                </td>
+                {% endif %}
+                {% else %}
+                <td class="no-data">
+                    <!-- 没有数据，红色单元格 -->
+                </td>
+                {% endif %}
                 {% endfor %}
+            </tr>
+            {% endfor %}
             </tbody>
         </table>
     </div>

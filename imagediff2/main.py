@@ -1,13 +1,21 @@
-from flask import Flask, render_template, send_file, send_from_directory
+import os
+
 from PIL import Image
-from PIL import ImageDraw
-import io, os
-from collections import defaultdict
-from imagediff import image_diff, encode_image, movie_diff
-from pathlib import Path
+from flask import Flask, render_template, send_from_directory
+
 from config import SCREENSHOTS_DIR
+from imagediff import image_diff, encode_image, movie_diff
 
 app = Flask(__name__)
+
+def get_frame_number(filename):
+    parts = filename.split('-')
+    if len(parts) > 1:
+        try:
+            return int(parts[1].split('.')[0])
+        except ValueError:
+            return 0
+    return 0
 
 @app.route('/')
 def index():
@@ -53,12 +61,12 @@ def index():
 
 @app.route('/alldiff')
 def alldiff():
-   
+
     path = os.path.dirname(os.path.abspath(__file__))
     print(path)
     versions = [d for d in os.listdir(f'{path}/pic') if os.path.isdir(f'{path}/pic/{d}')]
     versions.sort()
-   
+
     movies = defaultdict(list)
     for version in versions:
         for file in os.listdir(f'{path}/pic/{version}'):
@@ -87,7 +95,7 @@ def alldiff():
                     diffs[movie].append('red')
                     print('red')
                     break
-                
+
             if cnt == len(files):
                 diffs[movie].append('white')
                 print('white')
@@ -320,6 +328,44 @@ def compare(build1, build2, target, movie):
                            target=target,
                            movie=movie,
                            comparisons=frame_comparisons)
+
+@app.route('/view/<target>/<build>/<movie>')
+def view_single_build(target, build, movie):
+    """
+    Display all frames of a movie from a single build without comparison.
+    """
+
+    build_path = os.path.join(SCREENSHOTS_DIR, target, build)
+
+    frames = sorted([f for f in os.listdir(build_path)
+                     if os.path.isfile(os.path.join(build_path, f)) and f.startswith(f"{movie}-")])
+
+    # Sort frames by number
+    frames.sort(key=get_frame_number)
+
+    # Prepare frame data for the template
+    frame_data = []
+    for frame in frames:
+        frame_path = os.path.join(build_path, frame)
+        frame_num = get_frame_number(frame)
+
+        try:
+            img = Image.open(frame_path)
+            img_data = encode_image(img)
+
+            frame_data.append({
+                'frame_number': frame_num,
+                'filename': frame,
+                'img_data': img_data
+            })
+        except Exception as e:
+            print(f"Error processing frame {frame}: {e}")
+
+    return render_template('view.html',
+                           target=target,
+                           build=build,
+                           movie=movie,
+                           frames=frame_data)
 
 @app.route('/screenshots/<path:filename>')
 def screenshots(filename):

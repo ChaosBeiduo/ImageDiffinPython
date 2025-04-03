@@ -1,5 +1,5 @@
-*{
- font-weight: normal;
+h1, h2, h3{
+    font-weight: normal;
 }
 
 body{
@@ -29,7 +29,9 @@ a:hover {
 }
 
 .quote{
-    padding: 12px;
+    padding: 24px;
+
+    width: fit-content;
 
     border: 1px solid #dcdcdc;
     border-radius: 6px;
@@ -46,22 +48,27 @@ a:hover {
     background: #f7f7f7;
 }
 
+.alert {
+    padding: .75rem 1.25rem;
+    margin-bottom: 1rem;
+
+    color: #004085;
+    background-color: #cce5ff;
+    border: 1px solid #b8daff;
+    border-radius: 6px;
+}
+
 .result-table{
     border-collapse:collapse;
-    padding-bottom: 24px;
 
     text-align: center;
+}
+
+.result-table.horizontal{
+    padding-bottom: 24px;
 
     thead>tr{
         height: 50px;
-    }
-
-    .result-table-build{
-        width: 30px;
-        transform: translate(-12px, 10px) rotate(315deg);
-        a{
-            border-bottom: 1px solid #ccc;
-        }
     }
 
     tbody{
@@ -93,5 +100,33 @@ a:hover {
         td.success, td.first-build {
             background-color: #90ee90;
         }
+    }
+
+    .result-table-build{
+        width: 30px;
+        transform: translate(-12px, 10px) rotate(315deg);
+        a{
+            border-bottom: 1px solid #ccc;
+        }
+    }
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+
+    thead{
+        height: 50px;
+    }
+
+    th, td{
+        text-align: center;
+        width: 33.33%;
+    }
+
+    .frame-image {
+        max-width: 300px;
+        max-height: 300px;
     }
 }

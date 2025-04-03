@@ -17,82 +17,58 @@
 
             li{
                 list-style: none;
-
-                a{
-                    color: cornflowerblue;
-                    font-size: large;
-                }
-            }
-        }
-
-
-        .result-table{
-            padding-bottom: 24px;
-
-            text-align: center;
-
-            thead>tr{
-                height: 50px;
-            }
-
-            .result-table-build{
-                width: 30px;
-                transform: translate(-12px, 10px) rotate(315deg);
-                a{
-                    border-bottom: 1px solid #ccc;
-                }
             }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1><a href="{{ url_for('index') }}">ImageDiff</a></h1>
-    </header>
+<header>
+    <h1><a href="{{ url_for('index') }}">ImageDiff</a></h1>
+</header>
 
-    <section class="target">
-        <div class="target-list">
-            <ul>
-                {% for target in targets_info.keys() %}
-                <li><a href="#{{ target }}">{{ target }}</a></li>
-                {% endfor %}
-            </ul>
-        </div>
+<section class="target">
+    <div class="target-list">
+        <ul>
+            {% for target in targets_info.keys() %}
+            <li><a href="#{{ target }}">{{ target }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
 
-        {% for target, info in targets_info.items() %}
-        <div class="target-info" id="{{ target }}">
-            <h2>Differences for <span class="code">{{ target | capitalize }}</span></h2>
+    {% for target, info in targets_info.items() %}
+    <div class="target-info" id="{{ target }}">
+        <h2>Differences for <span class="code">{{ target | capitalize }}</span></h2>
 
-            <div class="quote">
-                <table class="result-table">
-                    <thead>
-                    <tr>
-                        <th> </th>
-                        {% for build in info.builds %}
-                        <th class="result-table-build"><a href="{{ url_for('build', build=build) }}">{{ build }}</a></th>
-                        {% endfor %}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for movie in info.movies %}
-                    <tr>
-                        <th><a href="{{ url_for('movie', movie=movie) }}">{{ movie }}</a></th>
-                        {% for build in info.builds %}
-                        <td>
-                            {% if movie in info.build_movies.get(build, []) %}
-                            <a href="#">View</a>
-                            {% else %}
-                            —
-                            {% endif %}
-                        </td>
-                        {% endfor %}
-                    </tr>
+        <div class="quote">
+            <table class="result-table horizontal">
+                <thead>
+                <tr>
+                    <th> </th>
+                    {% for build in info.builds %}
+                    <th class="result-table-build"><a href="{{ url_for('build', build=build) }}">{{ build }}</a></th>
                     {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                </tr>
+                </thead>
+                <tbody>
+                {% for movie in info.movies %}
+                <tr>
+                    <th><a href="{{ url_for('movie', movie=movie) }}">{{ movie }}</a></th>
+                    {% for build in info.builds %}
+                    <td>
+                        {% if movie in info.build_movies.get(build, []) %}
+                        <a href="#">View</a>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
-        {% endfor %}
-    </section>
+    </div>
+    {% endfor %}
+</section>
 </body>
 </html>
