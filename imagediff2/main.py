@@ -83,49 +83,141 @@ def target_detail(target):
                     reverse=True)
 
     all_movies = set()
-    build_movies = {}
-    diff_matrix = {}
+    build_movie_frames = {}
 
     for build in builds:
         build_path = os.path.join(target_path, build)
         movie_files = [f for f in os.listdir(build_path)
                        if os.path.isfile(os.path.join(build_path, f))]
 
-        movie_names = set()
+        build_movie_frames[build] = {}
+
         for file in movie_files:
             if "-" in file:
-                movie_name = file.split("-")[0]
-                movie_names.add(movie_name)
+                parts = file.split("-")
+                movie_name = parts[0]
+                frame_num = parts[1].split('.')[0]
 
-        build_movies[build] = movie_names
-        all_movies.update(movie_names)
+                if movie_name not in build_movie_frames[build]:
+                    build_movie_frames[build][movie_name] = []
 
-    for i in range(len(builds) - 1):
-        current_build = builds[i]
-        prev_build = builds[i + 1]
+                build_movie_frames[build][movie_name].append(frame_num)
+                all_movies.add(movie_name)
 
-        for movie in all_movies:
-            if movie not in diff_matrix:
-                diff_matrix[movie] = {}
+    first_build_for_movie = {}
+    builds_ascending = sorted([b for b in os.listdir(target_path)
+                               if os.path.isdir(os.path.join(target_path, b))])
 
-            has_in_current = movie in build_movies.get(current_build, set())
-            has_in_next = movie in build_movies.get(prev_build, set())
+    for movie in all_movies:
+        for build in builds_ascending:
+            if movie in build_movie_frames.get(build, {}):
+                first_build_for_movie[movie] = build
+                break
 
-            if has_in_current and has_in_next:
-                has_diff = movie_diff(current_build, prev_build, target, movie)
-                diff_matrix[movie][(current_build, prev_build)] = has_diff
-            else:
-                diff_matrix[movie][(current_build, prev_build)] = True
+    movies = sorted(list(all_movies))
+    continuous_bars = {}
 
-    # 按名称排序
-    all_movies = sorted(list(all_movies))
+    for movie in movies:
+        continuous_bars[movie] = []
+
+        for i, current_build in enumerate(builds):
+            has_in_current = movie in build_movie_frames.get(current_build, {})
+            current_frames = build_movie_frames.get(current_build, {}).get(movie, [])
+
+            prev_build = builds[i+1] if i < len(builds)-1 else None
+            prev_frames = build_movie_frames.get(prev_build, {}).get(movie, []) if prev_build else []
+
+            is_first_build = (current_build == first_build_for_movie.get(movie))
+
+            if is_first_build:
+                continuous_bars[movie].append({
+                    'build': current_build,
+                    'type': 'first'
+                })
+            elif not has_in_current and prev_build:
+
+                reference_build = None
+                for j in range(i+1, len(builds)):
+                    if movie in build_movie_frames.get(builds[j], {}):
+                        reference_build = builds[j]
+                        break
+
+                if reference_build:
+                    continuous_bars[movie].append({
+                        'build': current_build,
+                        'reference_build': reference_build,
+                        'type': 'diff',
+                        'has_diff': False,
+                        'is_skipped': True,
+                        'compare_with': reference_build
+                    })
+                else:
+                    continuous_bars[movie].append({
+                        'build': current_build,
+                        'type': 'missing'
+                    })
+            elif has_in_current and prev_build:
+                has_in_prev = len(prev_frames) > 0
+
+                if has_in_prev:
+                    common_frames = set(current_frames).intersection(set(prev_frames))
+
+                    if len(current_frames) < len(prev_frames):
+                        has_any_diff = False
+
+                        for frame in common_frames:
+                            current_frame_path = os.path.join(target_path, current_build, f"{movie}-{frame}.png")
+                            prev_frame_path = os.path.join(target_path, prev_build, f"{movie}-{frame}.png")
+
+                            if os.path.exists(current_frame_path) and os.path.exists(prev_frame_path):
+                                try:
+                                    diff_result = image_diff(current_frame_path, prev_frame_path)
+                                    if diff_result.get('has_diff', False):
+                                        has_any_diff = True
+                                        break
+                                except Exception as e:
+                                    print(f"Error comparing frames {movie}-{frame}: {e}")
+                                    has_any_diff = True
+
+                        continuous_bars[movie].append({
+                            'build': current_build,
+                            'has_diff': has_any_diff,
+                            'compare_with': prev_build,
+                            'type': 'diff',
+                            'is_partial': True
+                        })
+                    else:
+                        has_diff = movie_diff(current_build, prev_build, target, movie)
+
+                        continuous_bars[movie].append({
+                            'build': current_build,
+                            'has_diff': has_diff,
+                            'compare_with': prev_build,
+                            'type': 'diff'
+                        })
+                else:
+                    reference_build = None
+                    for j in range(i+1, len(builds)):
+                        if movie in build_movie_frames.get(builds[j], {}):
+                            reference_build = builds[j]
+                            break
+
+                    continuous_bars[movie].append({
+                        'build': current_build,
+                        'type': 'readded',
+                        'compare_with': reference_build
+                    })
+            elif not prev_build:
+                continuous_bars[movie].append({
+                    'build': current_build,
+                    'type': 'unknown'
+                })
 
     return render_template('target.html',
                            target=target,
                            builds=builds,
-                           movies=all_movies,
-                           build_movies=build_movies,
-                           diff_matrix=diff_matrix)
+                           movies=movies,
+                           continuous_bars=continuous_bars)
 
 
 @app.route('/movie/<movie>')

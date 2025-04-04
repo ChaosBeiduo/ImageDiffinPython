@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Target: {{ target }} - ImageDiff</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        .cell-partial {
+            position: relative;
+        }
+
+        .cell-partial::after {
+            content: "⚠️";
+            position: absolute;
+            font-size: 10px;
+            bottom: 0;
+            right: 0;
+        }
+    </style>
 </head>
 <body>
 <header>
@@ -15,55 +28,78 @@
 
 <section>
     <h2>Recent Results</h2>
+
     <div class="quote">
-        <div style="overflow-x: auto;">
-            <table class="result-table horizontal">
-                <thead>
-                <tr>
-                    <th> </th>
-                    {% for build in builds %}
-                    <th class="result-table-build">
-                        <a href="{{ url_for('build', build=build) }}">{{ build }}</a>
-                    </th>
-                    {% endfor %}
-                </tr>
-                </thead>
-                <tbody>
-                {% for movie in movies %}
-                <tr>
-                    <th>
-                        <a href="{{ url_for('movie', movie=movie) }}">{{ movie }}</a>
-                    </th>
-                    {% for i in range(builds|length) %}
-                    {% set build = builds[i] %}
-                    {% if movie in build_movies.get(build, []) %}
-                    {% if i < (builds|length - 1) %}
-                    {% set prev_build = builds[i+1] %}
-                    {% if (build, prev_build) in diff_matrix.get(movie, {}) %}
-                    {% if diff_matrix[movie][(build, prev_build)] %}
-                    <td class="success has-diff">
-                        <a href="{{ url_for('compare', build1=build, build2=prev_build, target=target, movie=movie) }}">🔍</a>
-                    </td>
-                    {% else %}
-                    <td class="success no-diff">
-                    {% endif %}
-                    {% else %}
-                    <td class="no-diff"></td>
-                    {% endif %}
-                    {% else %}
-                    <td class="success first-build">
-                        <a href="{{ url_for('view_single_build', build=build, target=target, movie=movie) }}">🔍</a>
-                    </td>
-                    {% endif %}
-                    {% else %}
-                    <td class="no-data"></td>
-                    {% endif %}
-                    {% endfor %}
-                </tr>
+        <table class="result-table horizontal">
+            <thead>
+            <tr>
+                <th></th>
+                {% for build in builds %}
+                <th class="result-table-build">
+                    <a href="{{ url_for('build', build=build) }}">{{ build }}</a>
+                </th>
                 {% endfor %}
-                </tbody>
-            </table>
-        </div>
+            </tr>
+            </thead>
+            <tbody>
+            {% for movie in movies %}
+            <tr>
+                <th>
+                    <a href="{{ url_for('movie', movie=movie) }}">{{ movie }}</a>
+                </th>
+
+                {% for cell in continuous_bars[movie] %}
+                {% if cell.type == 'diff' %}
+                {% if cell.get('is_skipped', False) %}
+                <td class="success no-diff" title="Build skipped (no changes from {{ cell.reference_build }})">
+                </td>
+                {% elif cell.get('is_partial', False) %}
+                {% if cell.has_diff %}
+                <td class="success has-diff cell-partial">
+                    <a href="{{ url_for('compare', build1=cell.build, build2=cell.compare_with, target=target, movie=movie) }}"
+                       title="Partial frames with changes detected">
+                        🔍
+                    </a>
+                </td>
+                {% else %}
+                <td class="success no-diff cell-partial" title="Partial frames with no changes">
+                </td>
+                {% endif %}
+                {% else %}
+                {% if cell.has_diff %}
+                <td class="success has-diff">
+                    <a href="{{ url_for('compare', build1=cell.build, build2=cell.compare_with, target=target, movie=movie) }}">
+                        🔍
+                    </a>
+                </td>
+                {% else %}
+                <td class="success no-diff">
+                </td>
+                {% endif %}
+                {% endif %}
+                {% elif cell.type == 'first' %}
+                <td class="success first-build">
+                    <a href="{{ url_for('view_single_build', build=cell.build, target=target, movie=movie) }}">🔍</a>
+                </td>
+                {% elif cell.type == 'missing' %}
+                <td class="no-data">
+                </td>
+                {% elif cell.type == 'readded' %}
+                <td class="success has-diff">
+                    <a href="{{ url_for('compare', build1=cell.build, build2=cell.compare_with, target=target, movie=movie) }}"
+                       title="Movie was re-added in this build">
+                        🔍
+                    </a>
+                </td>
+                {% else %}
+                <td class="no-data">
+                </td>
+                {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
 </section>
 </body>
