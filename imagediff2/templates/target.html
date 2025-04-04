@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Target: {{ target }} - ImageDiff</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+<header>
+    <h1><a href="{{ url_for('index') }}">ImageDiff</a></h1>
+</header>
+
+<h1>Target: <span class="code">{{ target }}</span></h1>
+
+<section>
+    <h2>Recent Results</h2>
+    <div class="quote">
+        <div style="overflow-x: auto;">
+            <table class="result-table horizontal">
+                <thead>
+                <tr>
+                    <th> </th>
+                    {% for build in builds %}
+                    <th class="result-table-build">
+                        <a href="{{ url_for('build', build=build) }}">{{ build }}</a>
+                    </th>
+                    {% endfor %}
+                </tr>
+                </thead>
+                <tbody>
+                {% for movie in movies %}
+                <tr>
+                    <th>
+                        <a href="{{ url_for('movie', movie=movie) }}">{{ movie }}</a>
+                    </th>
+                    {% for i in range(builds|length) %}
+                    {% set build = builds[i] %}
+                    {% if movie in build_movies.get(build, []) %}
+                    {% if i < (builds|length - 1) %}
+                    {% set prev_build = builds[i+1] %}
+                    {% if (build, prev_build) in diff_matrix.get(movie, {}) %}
+                    {% if diff_matrix[movie][(build, prev_build)] %}
+                    <td class="success has-diff">
+                        <a href="{{ url_for('compare', build1=build, build2=prev_build, target=target, movie=movie) }}">🔍</a>
+                    </td>
+                    {% else %}
+                    <td class="success no-diff">
+                    {% endif %}
+                    {% else %}
+                    <td class="no-diff"></td>
+                    {% endif %}
+                    {% else %}
+                    <td class="success first-build">
+                        <a href="{{ url_for('view_single_build', build=build, target=target, movie=movie) }}">🔍</a>
+                    </td>
+                    {% endif %}
+                    {% else %}
+                    <td class="no-data"></td>
+                    {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

@@ -71,6 +71,62 @@ def alldiff():
 
     return render_template('alldiff.html', **dict(diffs=diffs, movies=movies, versions=versions))
 
+@app.route('/target/<target>')
+def target_detail(target):
+    target_path = os.path.join(SCREENSHOTS_DIR, target)
+
+    if not os.path.exists(target_path) or not os.path.isdir(target_path):
+        return "Target not found", 404
+
+    builds = sorted([b for b in os.listdir(target_path)
+                     if os.path.isdir(os.path.join(target_path, b))],
+                    reverse=True)
+
+    all_movies = set()
+    build_movies = {}
+    diff_matrix = {}
+
+    for build in builds:
+        build_path = os.path.join(target_path, build)
+        movie_files = [f for f in os.listdir(build_path)
+                       if os.path.isfile(os.path.join(build_path, f))]
+
+        movie_names = set()
+        for file in movie_files:
+            if "-" in file:
+                movie_name = file.split("-")[0]
+                movie_names.add(movie_name)
+
+        build_movies[build] = movie_names
+        all_movies.update(movie_names)
+
+    for i in range(len(builds) - 1):
+        current_build = builds[i]
+        prev_build = builds[i + 1]
+
+        for movie in all_movies:
+            if movie not in diff_matrix:
+                diff_matrix[movie] = {}
+
+            has_in_current = movie in build_movies.get(current_build, set())
+            has_in_next = movie in build_movies.get(prev_build, set())
+
+            if has_in_current and has_in_next:
+                has_diff = movie_diff(current_build, prev_build, target, movie)
+                diff_matrix[movie][(current_build, prev_build)] = has_diff
+            else:
+                diff_matrix[movie][(current_build, prev_build)] = True
+
+    # 按名称排序
+    all_movies = sorted(list(all_movies))
+
+    return render_template('target.html',
+                           target=target,
+                           builds=builds,
+                           movies=all_movies,
+                           build_movies=build_movies,
+                           diff_matrix=diff_matrix)
+
 
 @app.route('/movie/<movie>')
 def movie(movie):
