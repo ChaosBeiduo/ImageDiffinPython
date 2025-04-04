@@ -10,11 +10,6 @@
 
             border-bottom: 1px solid #ddd;
 
-            ul{
-                display: flex;
-                gap: 12px;
-            }
-
             li{
                 list-style: none;
             }
@@ -26,49 +21,26 @@
     <h1><a href="{{ url_for('index') }}">ImageDiff</a></h1>
 </header>
 
-<section class="target">
-    <div class="target-list">
-        <ul>
+<section>
+    <h1>Director builds</h1>
+
+    <div class="quote">
+        <table class="result-table">
+            <thead>
+                <tr>
+                    <th>Target</th>
+                </tr>
+            </thead>
+
+            <tbody>
             {% for target in targets_info.keys() %}
-            <li><a href="#{{ target }}">{{ target }}</a></li>
+            <tr>
+                <td><a href="#{{ target }}">{{ target }}</a></td>
+            </tr>
             {% endfor %}
-        </ul>
+            </tbody>
+        </table>
     </div>
-
-    {% for target, info in targets_info.items() %}
-    <div class="target-info" id="{{ target }}">
-        <h2>Differences for <span class="code">{{ target | capitalize }}</span></h2>
-
-        <div class="quote">
-            <table class="result-table horizontal">
-                <thead>
-                <tr>
-                    <th> </th>
-                    {% for build in info.builds %}
-                    <th class="result-table-build"><a href="{{ url_for('build', build=build) }}">{{ build }}</a></th>
-                    {% endfor %}
-                </tr>
-                </thead>
-                <tbody>
-                {% for movie in info.movies %}
-                <tr>
-                    <th><a href="{{ url_for('movie', movie=movie) }}">{{ movie }}</a></th>
-                    {% for build in info.builds %}
-                    <td>
-                        {% if movie in info.build_movies.get(build, []) %}
-                        <a href="#">View</a>
-                        {% else %}
-                        —
-                        {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endfor %}
 </section>
 </body>
 </html>
