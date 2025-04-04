@@ -19,45 +19,11 @@ def get_frame_number(filename):
 
 @app.route('/')
 def index():
-    targets_info = {}
+    targets = [d for d in os.listdir(SCREENSHOTS_DIR)
+               if os.path.isdir(os.path.join(SCREENSHOTS_DIR, d))]
 
-    for target in [d for d in os.listdir(SCREENSHOTS_DIR)
-                   if os.path.isdir(os.path.join(SCREENSHOTS_DIR, d))]:
+    return render_template('index.html', targets=targets)
 
-        target_path = os.path.join(SCREENSHOTS_DIR, target)
-        builds = sorted([b for b in os.listdir(target_path)
-                         if os.path.isdir(os.path.join(target_path, b))],
-                        reverse=True)
-
-        # Get all movie names across all builds
-        all_movies = set()
-        build_movies = {}
-
-        for build in builds:
-            build_path = os.path.join(target_path, build)
-            movie_files = [f for f in os.listdir(build_path)
-                           if os.path.isfile(os.path.join(build_path, f))]
-
-            movie_names = set()
-            for file in movie_files:
-                # Split by hyphen and take the first part as the movie name
-                if "-" in file:
-                    movie_name = file.split("-")[0]
-                    movie_names.add(movie_name)
-
-            build_movies[build] = movie_names
-            all_movies.update(movie_names)
-
-        # Convert set to sorted list for consistent display
-        all_movies = sorted(list(all_movies))
-
-        targets_info[target] = {
-            "builds": builds,
-            "movies": all_movies,
-            "build_movies": build_movies
-        }
-
-    return render_template('index.html', targets_info=targets_info)
 
 @app.route('/alldiff')
 def alldiff():
