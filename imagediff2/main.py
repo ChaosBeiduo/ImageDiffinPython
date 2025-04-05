@@ -1,7 +1,7 @@
 import os
 
 from PIL import Image
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, jsonify, url_for, send_from_directory
 
 from config import SCREENSHOTS_DIR
 from imagediff import image_diff, encode_image, movie_diff
@@ -124,7 +124,22 @@ def target_detail(target):
     if not os.path.exists(target_path) or not os.path.isdir(target_path):
         return "Target not found", 404
 
-    # Get sorted builds
+    # Only get the build list, other time-consuming operations moved to API
+    builds = get_sorted_builds(target_path)
+
+    # Only return the page framework with build list but without table data
+    return render_template('target.html',
+                           target=target,
+                           builds=builds)
+
+# Handle time-consuming data calculations
+@app.route('/api/target_data/<target>')
+def target_data_api(target):
+    target_path = os.path.join(SCREENSHOTS_DIR, target)
+
+    if not os.path.exists(target_path) or not os.path.isdir(target_path):
+        return jsonify({"error": "Target not found"}), 404
+
     builds = get_sorted_builds(target_path)
     builds_ascending = get_sorted_builds(target_path, reverse=False)
 
@@ -135,7 +150,7 @@ def target_detail(target):
     first_build_for_movie = find_first_build_for_movies(
         all_movies, builds_ascending, build_movie_frames)
 
-    # Updated reference build calculation to consider frame presence
+    # Calculate reference builds
     movie_reference_builds = {}
     for movie in all_movies:
         movie_reference_builds[movie] = {}
@@ -156,8 +171,7 @@ def target_detail(target):
                     'frames': []  # Empty since current build doesn't have the movie
                 }
             else:
-                # Current build has the movie, look for a reference build
-                # with matching frames
+                # Current build has the movie, find a reference build with matching frames
                 reference_data = {
                     'build': None,
                     'frames': current_frames
@@ -168,7 +182,7 @@ def target_detail(target):
                     if movie in build_movie_frames.get(next_build, {}):
                         next_frames = build_movie_frames.get(next_build, {}).get(movie, [])
 
-                        # Check if any of the current frames exist in the next build
+                        # Check if current frames exist in the next build
                         common_frames = set(current_frames).intersection(set(next_frames))
                         if common_frames:
                             reference_data = {
@@ -179,7 +193,7 @@ def target_detail(target):
 
                 movie_reference_builds[movie][current_build] = reference_data
 
-    # Pre-calculate image difference results using lazy loading
+    # Pre-calculate image difference results
     image_diff_cache = {}
     def get_image_diff(current_build, prev_build, movie, frame):
         cache_key = (current_build, prev_build, movie, frame)
@@ -212,7 +226,7 @@ def target_detail(target):
 
         return has_any_diff
 
-    # Pre-calculate movie difference results, also using lazy loading
+    # Pre-calculate movie difference results
     movie_diff_cache = {}
     def get_movie_diff_cached(current_build, prev_build, target, movie):
         cache_key = (current_build, prev_build, target, movie)
@@ -223,7 +237,7 @@ def target_detail(target):
     movies = sorted(list(all_movies))
     continuous_bars = {}
 
-    # Create continuous bars for visualization with updated skipped logic
+    # Create continuous bars for visualization with updated skip logic
     for movie in movies:
         continuous_bars[movie] = []
 
@@ -247,7 +261,7 @@ def target_detail(target):
                     'type': 'first'
                 })
             elif not has_in_current and prev_build:
-                # Modified logic for skipped builds
+                # Modified skip build logic
                 reference_data = movie_reference_builds[movie].get(current_build, {'build': None, 'frames': []})
                 reference_build = reference_data['build']
 
@@ -270,7 +284,7 @@ def target_detail(target):
                     common_frames = set(current_frames).intersection(set(prev_frames))
 
                     if len(current_frames) < len(prev_frames):
-                        # End the difference checking loop early
+                        # End difference check loop early
                         has_any_diff = False
                         for frame in common_frames:
                             diff_result = get_image_diff(current_build, prev_build, movie, frame)
@@ -295,7 +309,7 @@ def target_detail(target):
                             'type': 'diff'
                         })
                 else:
-                    # Modified logic for readded builds
+                    # Modified readded build logic
                     reference_data = movie_reference_builds[movie].get(current_build, {'build': None, 'frames': []})
                     reference_build = reference_data['build']
                     comparable_frames = reference_data['frames']
@@ -318,11 +332,30 @@ def target_detail(target):
                     'type': 'unknown'
                 })
 
-    return render_template('target.html',
-                           target=target,
-                           builds=builds,
-                           movies=movies,
-                           continuous_bars=continuous_bars)
+    # Generate URL templates needed by frontend
+    urls = {
+        'movie_url': url_for('movie', movie='MOVIE_PLACEHOLDER'),
+        'compare_url': url_for('compare',
+                               build1='BUILD1_PLACEHOLDER',
+                               build2='BUILD2_PLACEHOLDER',
+                               target='TARGET_PLACEHOLDER',
+                               movie='MOVIE_PLACEHOLDER'),
+        'single_build_url': url_for('view_single_build',
+                                    build='BUILD_PLACEHOLDER',
+                                    target='TARGET_PLACEHOLDER',
+                                    movie='MOVIE_PLACEHOLDER')
+    }
+
+    # Return all data to frontend
+    data = {
+        'target': target,
+        'builds': builds,
+        'movies': movies,
+        'continuous_bars': continuous_bars,
+        'urls': urls
+    }
+
+    return jsonify(data)
 
 @app.route('/movie/<movie>')
 def movie(movie):
