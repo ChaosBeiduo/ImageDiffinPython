@@ -12,10 +12,7 @@
             color: green;
         }
         .missing-frame {
-            /*background-color: #f8f8f8;*/
             color: #999;
-            /*padding: 20px;*/
-            /*border: 1px dashed #ccc;*/
         }
     </style>
 </head>
@@ -27,6 +24,10 @@
 <h2><a href="{{ url_for('build', build=build1) }}">{{ build1 }}</a> vs. <a href="{{ url_for('build', build=build2) }}">{{ build2 }}</a> / <a href="{{ url_for('movie', movie=movie) }}">{{ movie }}</a> / <a href="{{ url_for('index') }}#{{ target }}">{{ target }}</a></h2>
 
 {% if comparisons %}
+<div class="quote">
+    <b>Different Frames: {{ stats.different_frames }}</b>
+</div>
+
 <table class="comparison-table">
     <thead>
     <tr>
@@ -37,16 +38,12 @@
     </thead>
     <tbody>
     {% for comp in comparisons %}
-    <tr class="comparison-row">
+    <tr class="{% if comp.has_diff %}has-diff{% else %}no-diff{% endif %}" data-frame="{{ comp.frame_number }}">
         <td>
-            {% if comp.build1_frame %}
             {% if comp.diff_data and comp.diff_data.src_img_data %}
             <img class="frame-image" src="data:image/png;base64,{{ comp.diff_data.src_img_data }}" alt="Frame {{ comp.frame_number }} in {{ build1 }}">
             {% else %}
             <div class="missing-frame">Image data not available</div>
-            {% endif %}
-            {% else %}
-            <div class="missing-frame">Frame not present in {{ build1 }}</div>
             {% endif %}
         </td>
         <td>
@@ -61,14 +58,10 @@
             {% endif %}
         </td>
         <td>
-            {% if comp.build2_frame %}
             {% if comp.diff_data and comp.diff_data.cmp_img_data %}
             <img class="frame-image" src="data:image/png;base64,{{ comp.diff_data.cmp_img_data }}" alt="Frame {{ comp.frame_number }} in {{ build2 }}">
             {% else %}
             <div class="missing-frame">Image data not available</div>
-            {% endif %}
-            {% else %}
-            <div class="missing-frame">Frame not present in {{ build2 }}</div>
             {% endif %}
         </td>
     </tr>
@@ -76,7 +69,9 @@
     </tbody>
 </table>
 {% else %}
-<p>No frames found for comparison.</p>
+<div class="quote">
+    <p>No frames found for comparison.</p>
+</div>
 {% endif %}
 </body>
 </html>
