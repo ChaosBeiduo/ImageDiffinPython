@@ -86,10 +86,14 @@
                 </td>
                 {% elif cell.type == 'readded' %}
                 <td class="success has-diff">
+                    {% if cell.compare_with %}
                     <a href="{{ url_for('compare', build1=cell.build, build2=cell.compare_with, target=target, movie=movie) }}"
                        title="Movie was re-added in this build">
                         🔍
                     </a>
+                    {% else %}
+                    <span title="Movie was re-added but no previous version found for comparison">🔄</span>
+                    {% endif %}
                 </td>
                 {% else %}
                 <td class="no-data">
